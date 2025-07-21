@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel Cliente - Nord Streaming</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="index.html" class="nav-logo">Nord Streaming</a>
+            <div class="nav-links">
+                <span class="nav-link" style="font-style: italic;">Hola, <span id="username"></span></span>
+                <button onclick="logout()" class="btn btn-small" style="background: #10b981;">Cerrar Sesión</button>
+            </div>
+        </div>
+    </nav>
+
+    <main class="main-content">
+        <div class="dashboard-header">
+            <h1 class="dashboard-title">Panel de Cliente - Nord Streaming</h1>
+        </div>
+
+        <!-- Lista de productos -->
+        <div id="productsContainer" class="products-grid"></div>
+    </main>
+
+    <!-- Modal para detalles del producto -->
+    <div id="productModal" class="modal hidden">
+        <div class="modal-content">
+            <span class="modal-close" onclick="closeModal()">&times;</span>
+            <div id="modalContent"></div>
+        </div>
+    </div>
+
+    <script src="js/auth.js"></script>
+    <script src="js/products.js"></script>
+    <script>
+        // Verificar permisos de cliente
+        if (!requireRole('client')) {
+            // La función requireRole ya redirige si no tiene permisos
+        } else {
+            // Mostrar nombre de usuario
+            document.getElementById('username').textContent = getCurrentUser().username;
+            
+            // Cargar productos
+            loadProducts();
+        }
+
+        function loadProducts() {
+            const products = getProducts();
+            const container = document.getElementById('productsContainer');
+            
+            if (products.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #4a5568;">No hay servicios disponibles</p>';
+                return;
+            }
+            
+            container.innerHTML = products.map(product => `
+                <div class="product-card">
+                    ${product.imageUrl ? `<img src="${product.imageUrl}" alt="${product.title}" class="product-image">` : ''}
+                    <h3 class="product-title">${product.title}</h3>
+                    <p class="product-description">${product.description}</p>
+                    <p class="product-price">$${product.price.toFixed(2)}</p>
+                    <div class="product-actions">
+                        <button onclick="showProductDetails(${JSON.stringify(product).replace(/"/g, '"')})" class="btn btn-small btn-view">Ver detalles</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function showProductDetails(product) {
+            const modalContent = document.getElementById('modalContent');
+            modalContent.innerHTML = `
+                <div style="text-align: center;">
+                    ${product.imageUrl ? `<img src="${product.imageUrl}" alt="${product.title}" style="width: 100%; max-width: 400px; border-radius: 8px; margin-bottom: 1rem;">` : ''}
+                    <h2 style="color: #10b981; margin-bottom: 1rem;">${product.title}</h2>
+                    <p style="margin-bottom: 1rem; line-height: 1.6; color: #1a202c;">${product.description}</p>
+                    <p style="font-size: 1.5rem; font-weight: 700; color: #10b981; margin-bottom: 2rem;">$${product.price.toFixed(2)}</p>
+                    
+                    <div style="background: rgba(30, 58, 46, 0.1); padding: 1.5rem; border-radius: 8px; margin-bottom: 1rem;">
+                        <h3 style="margin-bottom: 1rem; color: #1e3a2e;">Información de Contacto</h3>
+                        <p style="color: #4a5568;"><strong>Email:</strong> ventas@nordstreaming.com</p>
+                        <p style="color: #4a5568;"><strong>Teléfono:</strong> +1 (555) 123-4567</p>
+                        <p style="color: #4a5568;"><strong>Horario:</strong> Lunes a Viernes, 9:00 AM - 6:00 PM</p>
+                    </div>
+                    
+                    <div style="background: rgba(30, 58, 46, 0.1); padding: 1.5rem; border-radius: 8px;">
+                        <h3 style="margin-bottom: 1rem; color: #1e3a2e;">Detalles del Servicio</h3>
+                        <p style="color: #4a5568;"><strong>Categoría:</strong> Servicio de Streaming</p>
+                        <p style="color: #4a5568;"><strong>Disponibilidad:</strong> Inmediata</p>
+                        <p style="color: #4a5568;"><strong>Soporte:</strong> 24/7</p>
+                        <p style="color: #4a5568;"><strong>Garantía:</strong> 30 días</p>
+                    </div>
+                </div>
+            `;
+            document.getElementById('productModal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('productModal').classList.add('hidden');
+        }
+
+        // Cerrar modal al hacer clic fuera de él
+        window.onclick = function(event) {
+            const modal = document.getElementById('productModal');
+            if (event.target === modal) {
+                closeModal();
+            }
+        }
+    </script>
+
+    <style>
+        /* Estilos para el modal */
+        .modal {
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            margin: 2rem;
+            padding: 2rem;
+            border-radius: 12px;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+            position: relative;
+            color: #1a202c;
+            border: 1px solid rgba(30, 58, 46, 0.1);
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 1rem;
+            right: 1.5rem;
+            font-size: 2rem;
+            font-weight: bold;
+            cursor: pointer;
+            color: #1a202c;
+            transition: color 0.3s ease;
+        }
+
+        .modal-close:hover {
+            color: #10b981;
+        }
+    </style>
+</body>
+</html>
