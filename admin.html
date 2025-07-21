@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel Admin - Nord Streaming</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="index.html" class="nav-logo">Nord Streaming</a>
+            <div class="nav-links">
+                <span class="nav-link" style="font-style: italic;">Hola, <span id="username"></span></span>
+                <button onclick="logout()" class="btn btn-small" style="background: #10b981;">Cerrar Sesión</button>
+            </div>
+        </div>
+    </nav>
+
+    <main class="main-content">
+        <div class="dashboard-header">
+            <h1 class="dashboard-title">Panel de Administración - Nord Streaming</h1>
+            <button id="addProductBtn" class="btn btn-primary">Agregar Servicio</button>
+        </div>
+
+        <!-- Formulario para agregar/editar producto -->
+        <div id="productForm" class="form-container hidden">
+            <h2 class="form-title" id="formTitle">Agregar Servicio</h2>
+            <form id="productFormElement">
+                <input type="hidden" id="productId">
+                <div class="form-group">
+                    <label for="title" class="form-label">Título</label>
+                    <input type="text" id="title" class="form-input" placeholder="Nombre del servicio" required>
+                    <div class="error-message" id="titleError"></div>
+                </div>
+                <div class="form-group">
+                    <label for="description" class="form-label">Descripción</label>
+                    <textarea id="description" class="form-input" rows="4" placeholder="Descripción del servicio" required></textarea>
+                    <div class="error-message" id="descriptionError"></div>
+                </div>
+                <div class="form-group">
+                    <label for="price" class="form-label">Precio</label>
+                    <input type="number" id="price" class="form-input" step="0.01" placeholder="0.00" required>
+                    <div class="error-message" id="priceError"></div>
+                </div>
+                <div class="form-group">
+                    <label for="imageUrl" class="form-label">URL de imagen (opcional)</label>
+                    <input type="url" id="imageUrl" class="form-input" placeholder="https://ejemplo.com/imagen.jpg">
+                </div>
+                <div style="display: flex; gap: 1rem;">
+                    <button type="submit" class="btn btn-primary">
+                        <span id="submitText">Guardar</span>
+                    </button>
+                    <button type="button" id="cancelBtn" class="btn btn-secondary">Cancelar</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Lista de productos -->
+        <div id="productsContainer" class="products-grid"></div>
+    </main>
+
+    <script src="js/auth.js"></script>
+    <script src="js/products.js"></script>
+    <script>
+        // Verificar permisos de admin
+        if (!requireRole('admin')) {
+            // La función requireRole ya redirige si no tiene permisos
+        } else {
+            // Mostrar nombre de usuario
+            document.getElementById('username').textContent = getCurrentUser().username;
+            
+            // Cargar productos
+            loadProducts();
+            
+            // Event listeners
+            document.getElementById('addProductBtn').addEventListener('click', showAddForm);
+            document.getElementById('cancelBtn').addEventListener('click', hideForm);
+            document.getElementById('productFormElement').addEventListener('submit', handleProductSubmit);
+        }
+
+        function showAddForm() {
+            document.getElementById('formTitle').textContent = 'Agregar Servicio';
+            document.getElementById('productId').value = '';
+            document.getElementById('productFormElement').reset();
+            document.getElementById('productForm').classList.remove('hidden');
+            document.getElementById('submitText').textContent = 'Agregar';
+        }
+
+        function showEditForm(product) {
+            document.getElementById('formTitle').textContent = 'Editar Servicio';
+            document.getElementById('productId').value = product.id;
+            document.getElementById('title').value = product.title;
+            document.getElementById('description').value = product.description;
+            document.getElementById('price').value = product.price;
+            document.getElementById('imageUrl').value = product.imageUrl || '';
+            document.getElementById('productForm').classList.remove('hidden');
+            document.getElementById('submitText').textContent = 'Actualizar';
+        }
+
+        function hideForm() {
+            document.getElementById('productForm').classList.add('hidden');
+            clearErrors();
+        }
+
+        function clearErrors() {
+            document.getElementById('titleError').textContent = '';
+            document.getElementById('descriptionError').textContent = '';
+            document.getElementById('priceError').textContent = '';
+        }
+
+        function handleProductSubmit(e) {
+            e.preventDefault();
+            
+            clearErrors();
+            
+            const productId = document.getElementById('productId').value;
+            const title = document.getElementById('title').value;
+            const description = document.getElementById('description').value;
+            const price = parseFloat(document.getElementById('price').value);
+            const imageUrl = document.getElementById('imageUrl').value;
+            
+            // Validación
+            if (!title) {
+                document.getElementById('titleError').textContent = 'El título es requerido';
+                return;
+            }
+            
+            if (!description) {
+                document.getElementById('descriptionError').textContent = 'La descripción es requerida';
+                return;
+            }
+            
+            if (!price || price < 0) {
+                document.getElementById('priceError').textContent = 'El precio debe ser positivo';
+                return;
+            }
+            
+            const productData = { title, description, price, imageUrl };
+            
+            if (productId) {
+                updateProduct(productId, productData);
+            } else {
+                addProduct(productData);
+            }
+            
+            hideForm();
+            loadProducts();
+        }
+
+        function loadProducts() {
+            const products = getProducts();
+            const container = document.getElementById('productsContainer');
+            
+            if (products.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #4a5568;">No hay servicios disponibles</p>';
+                return;
+            }
+            
+            container.innerHTML = products.map(product => `
+                <div class="product-card">
+                    ${product.imageUrl ? `<img src="${product.imageUrl}" alt="${product.title}" class="product-image">` : ''}
+                    <h3 class="product-title">${product.title}</h3>
+                    <p class="product-description">${product.description}</p>
+                    <p class="product-price">$${product.price.toFixed(2)}</p>
+                    <div class="product-actions">
+                        <button onclick="showEditForm(${JSON.stringify(product).replace(/"/g, '"')})" class="btn btn-small btn-edit">Editar</button>
+                        <button onclick="deleteProductConfirm('${product.id}')" class="btn btn-small btn-delete">Eliminar</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function deleteProductConfirm(productId) {
+            if (confirm('¿Está seguro de eliminar este servicio?')) {
+                deleteProduct(productId);
+                loadProducts();
+            }
+        }
+    </script>
+</body>
+</html>
